@@ -86,7 +86,7 @@ class FunSetSuite extends FunSuite {
    * Once you finish your implementation of "singletonSet", exchange the
    * function "ignore" by "test".
    */
-  ignore("singletonSet(1) contains 1") {
+  test("singletonSet(1) contains 1") {
     
     /**
      * We create a new instance of the "TestSets" trait, this gives us access
@@ -101,7 +101,7 @@ class FunSetSuite extends FunSuite {
     }
   }
 
-  ignore("union contains all elements") {
+  test("union contains all elements") {
     new TestSets {
       val s = union(s1, s2)
       assert(contains(s, 1), "Union 1")
@@ -109,4 +109,80 @@ class FunSetSuite extends FunSuite {
       assert(!contains(s, 3), "Union 3")
     }
   }
+
+  test("intersect contains all elements") {
+    new TestSets {
+      val s = union(s1, s2)
+      val t1 = intersect(s, s1)
+      val t2 = intersect(s, s3)
+
+      assert(contains(t1, 1), "Intersect 1")
+      assert(!contains(t1, 2), "Intersect 2")
+      assert(!contains(t2, 3), "Intersect 3")
+    }
+  }
+
+  test("diff contains all elements") {
+    new TestSets {
+      val s = union(s1, s2)
+      val t = union(s2, s3)
+      val u1 = diff(s, t)
+      val u2 = diff(t, s)
+
+      assert(contains(u1, 1), "Diff 1")
+      assert(!contains(u1, 2), "Diff 2")
+      assert(contains(u2, 3), "Diff 3")
+      assert(!contains(u2, 2), "Diff 4")
+    }
+  }
+
+  test("filter contains elements less than or equal to 2") {
+    new TestSets {
+      val s = union(union(s1, s2), s3)
+      val p = (x: Int) => (x <= 2)
+      val sFiltered = filter(s, p)
+
+      assert(contains(sFiltered, 1), "Filter 1")
+      assert(contains(sFiltered, 2), "Filter 2")
+      assert(!contains(sFiltered, 3), "Filter 3")
+    }
+  }
+
+  test("forall") {
+    new TestSets {
+      val s = union(union(s1, s2), s3)
+      val p = (x: Int) => (x <= 2)
+      val sFiltered = filter(s, p)
+
+      assert(!forall(s, p), "Forall 1")
+      assert(forall(sFiltered, p), "Forall 2")
+    }
+  }
+
+  test("exists") {
+    new TestSets {
+      val s = union(union(s1, s2), s3)
+      val p1 = (x: Int) => (x <= 2)
+      val p2 = (x: Int) => (x > 2)
+      val sFiltered = filter(s, p1)
+
+      assert(exists(s, p1), "Exists 1")
+      assert(exists(s, p2), "Exists 1")
+      assert(exists(sFiltered, p1), "Exists 2")
+      assert(!exists(sFiltered, p2), "Exists 2")
+    }
+  }
+
+  test("map contains all elements doubled") {
+    new TestSets {
+      val s = union(union(s1, s2), s3)
+      val f = (x: Int) => x * 2
+      val sMapped = map(s, f)
+
+      assert(contains(sMapped, 2), "Map 1")
+      assert(contains(sMapped, 4), "Map 2")
+      assert(contains(sMapped, 6), "Map 3")
+    }
+  }
+
 }

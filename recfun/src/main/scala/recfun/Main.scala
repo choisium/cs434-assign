@@ -15,7 +15,8 @@ object Main {
    * Exercise 1
    */
   def pascal(c: Int, r: Int): Int = {
-    if (c == 0 || r == 0 || c == r) 1 else pascal(c-1, r-1) + pascal(c, r-1)
+    if (c == 0 || r == 0 || c == r) 1
+    else pascal(c-1, r-1) + pascal(c, r-1)
   }
 
   /**
@@ -30,7 +31,6 @@ object Main {
     }
 
     def checkBalance(count: Int, chars: List[Char]): Boolean = {
-      // println(count, chars.head)
       if (count < 0) false
       else if (chars.isEmpty) count == 0
       else checkBalance(getCount(count, chars.head), chars.tail)
@@ -47,6 +47,5 @@ object Main {
     else if (coins.isEmpty) 0
     else if (money < coins.head) countChange(money, coins.tail)
     else countChange(money - coins.head, coins) + countChange(money, coins.tail)
-
   }
 }

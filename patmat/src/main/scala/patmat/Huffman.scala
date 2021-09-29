@@ -78,16 +78,21 @@ object Huffman {
    *   }
    */
   def times(chars: List[Char]): List[(Char, Int)] = {
-    def findCharAndAddTimes(char: Char, charCount: List[(Char, Int)]): List[(Char, Int)] = charCount match {
-      case List() => List((char, 1))
-      case c :: cs => {
-        if (c._1 == char) (c._1, c._2 + 1) :: cs
-        else c :: findCharAndAddTimes(char, cs)
+    def findCharAndIncrementCount(char: Char, charCount: List[(Char, Int)]): List[(Char, Int)] = {
+      charCount match {
+        case List() => List((char, 1))
+        case head :: tail => {
+          val currentChar = head._1
+          val currentCharCount = head._2
+          if (currentChar == char) (currentChar, currentCharCount + 1) :: tail
+          else head :: findCharAndIncrementCount(char, tail)
+        }
       }
     }
+
     chars match {
       case List() => List()
-      case c :: cs => findCharAndAddTimes(c, times(cs))
+      case head :: tail => findCharAndIncrementCount(head, times(tail))
     }
   }
 
@@ -99,17 +104,22 @@ object Huffman {
    * of a leaf is the frequency of the character.
    */
   def makeOrderedLeafList(freqs: List[(Char, Int)]): List[Leaf] = {
-    def insert(f: (Char, Int), leafs: List[Leaf]): List[Leaf] = leafs match {
-      case List() => List(Leaf(f._1, f._2))
-      case l :: ls => {
-        if (f._2 < l.weight) Leaf(f._1, f._2) :: leafs
-        else l :: insert(f, ls)
+    def insertInOrder(freq: (Char, Int), leafs: List[Leaf]): List[Leaf] = {
+      val currentChar = freq._1
+      val currentCharFreq = freq._2
+
+      leafs match {
+        case List() => List(Leaf(currentChar, currentCharFreq))
+        case head :: tail => {
+          if (currentCharFreq < head.weight) Leaf(currentChar, currentCharFreq) :: leafs
+          else head :: insertInOrder(freq, tail)
+        }
       }
     }
 
     freqs match {
       case List() => List()
-      case f :: fs => insert(f, makeOrderedLeafList(fs))
+      case head :: tail => insertInOrder(head, makeOrderedLeafList(tail))
     }
   }
 
@@ -117,8 +127,8 @@ object Huffman {
    * Checks whether the list `trees` contains only one single code tree.
    */
   def singleton(trees: List[CodeTree]): Boolean = trees match {
-    case x :: List() => true
-    case x => false
+    case one :: List() => true
+    case any => false
   }
 
   /**
@@ -135,8 +145,8 @@ object Huffman {
    */
   def combine(trees: List[CodeTree]): List[CodeTree] = trees match {
     case List() => trees
-    case x :: List() => trees
-    case x :: y :: remainder => makeCodeTree(x, y) :: remainder
+    case one :: List() => trees
+    case one :: two :: remainder => makeCodeTree(one, two) :: remainder
   }
 
   /**
@@ -185,14 +195,15 @@ object Huffman {
    */
   def decode(tree: CodeTree, bits: List[Bit]): List[Char] = {
     def accumulate(partialTree: CodeTree, leftBits: List[Bit], decoded: List[Char]): List[Char] = partialTree match {
-      case Leaf(c, _) => accumulate(tree, leftBits, c :: decoded)
-      case Fork(l, r, _, _) => {
+      case Leaf(char, _) => accumulate(tree, leftBits, decoded ::: List(char))
+      case Fork(left, right, _, _) => {
         if (leftBits.isEmpty) return decoded
-        else if (leftBits.head == 0) accumulate(l, leftBits.tail, decoded)
-        else accumulate(r, leftBits.tail, decoded)
+        else if (leftBits.head == 0) accumulate(left, leftBits.tail, decoded)
+        else accumulate(right, leftBits.tail, decoded)
       }
     }
-    accumulate(tree, bits, List()).reverse
+
+    accumulate(tree, bits, List())
   }
 
   /**
@@ -222,16 +233,20 @@ object Huffman {
    * into a sequence of bits.
    */
   def encode(tree: CodeTree)(text: List[Char]): List[Bit] = {
-    def accumulate(partialTree: CodeTree, leftChars: List[Char], encoded: List[Bit]): List[Bit] = partialTree match {
-      case Leaf(_, _) => accumulate(tree, leftChars.tail, encoded)
-      case Fork(l, r, _, _) => {
-        if (leftChars.isEmpty) return encoded
-        else if (chars(l).contains(leftChars.head)) accumulate(l, leftChars, 0 :: encoded)
-        else accumulate(r, leftChars, 1 :: encoded)
+    def accumulate(partialTree: CodeTree, leftChars: List[Char], encoded: List[Bit]): List[Bit] = {
+      if (leftChars.isEmpty) return encoded
+      else {
+        partialTree match {
+          case Leaf(_, _) => accumulate(tree, leftChars.tail, encoded)
+          case Fork(left, right, _, _) => {
+            if (chars(left).contains(leftChars.head)) accumulate(left, leftChars, encoded ::: List(0))
+            else accumulate(right, leftChars, encoded ::: List(1))
+          }
+        }
       }
     }
 
-    accumulate(tree, text, List()).reverse
+    accumulate(tree, text, List())
   }
 
 
@@ -244,7 +259,12 @@ object Huffman {
    * the code table `table`.
    */
   def codeBits(table: CodeTable)(char: Char): List[Bit] = table match {
-    case x :: xs => if (x._1 == char) x._2 else codeBits(xs)(char)
+    case Nil => throw new Exception("codeBits: Cannot find char from table")
+    case head :: tail => {
+      def currentChar = head._1
+      def currentBit = head._2
+      if (currentChar == char) currentBit else codeBits(tail)(char)
+    }
   }
 
   /**
@@ -257,8 +277,9 @@ object Huffman {
    */
   def convert(tree: CodeTree): CodeTable = {
     def getTableFromTree(subTree: CodeTree, prefix: List[Bit]): CodeTable = subTree match {
-      case Leaf(c, _) => List((c, prefix.reverse))
-      case Fork(l, r, _, _) => mergeCodeTables(getTableFromTree(l, 0 :: prefix), getTableFromTree(r, 1 :: prefix))
+      case Leaf(char, _) => List((char, prefix))
+      case Fork(left, right, _, _) => mergeCodeTables(getTableFromTree(left, prefix ::: List(0)),
+                                                      getTableFromTree(right, prefix ::: List(1)))
     }
 
     getTableFromTree(tree, List())
@@ -271,7 +292,7 @@ object Huffman {
    */
   def mergeCodeTables(a: CodeTable, b: CodeTable): CodeTable = a match {
     case List() => b
-    case x :: xs => x :: mergeCodeTables(xs, b)
+    case head :: tail => head :: mergeCodeTables(tail, b)
   }
 
   /**
@@ -283,7 +304,7 @@ object Huffman {
   def quickEncode(tree: CodeTree)(text: List[Char]): List[Bit] = {
     def accumulate(table: CodeTable, leftChars: List[Char], encoded: List[Bit]): List[Bit] = leftChars match {
       case List() => encoded
-      case c :: cs => accumulate(table, cs, encoded ++ codeBits(table)(c))
+      case head :: tail => accumulate(table, tail, encoded ::: codeBits(table)(head))
     }
 
     accumulate(convert(tree), text, List())

@@ -197,7 +197,7 @@ object Huffman {
     def accumulate(partialTree: CodeTree, leftBits: List[Bit], decoded: List[Char]): List[Char] = partialTree match {
       case Leaf(char, _) => accumulate(tree, leftBits, decoded ::: List(char))
       case Fork(left, right, _, _) => {
-        if (leftBits.isEmpty) return decoded
+        if (leftBits.isEmpty) decoded
         else if (leftBits.head == 0) accumulate(left, leftBits.tail, decoded)
         else accumulate(right, leftBits.tail, decoded)
       }
@@ -234,7 +234,7 @@ object Huffman {
    */
   def encode(tree: CodeTree)(text: List[Char]): List[Bit] = {
     def accumulate(partialTree: CodeTree, leftChars: List[Char], encoded: List[Bit]): List[Bit] = {
-      if (leftChars.isEmpty) return encoded
+      if (leftChars.isEmpty) encoded
       else {
         partialTree match {
           case Leaf(_, _) => accumulate(tree, leftChars.tail, encoded)

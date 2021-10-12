@@ -167,15 +167,11 @@ object Anagrams {
     def occurrencesAnagrams(occurrences: Occurrences): List[Sentence] = {
       if (occurrences.isEmpty) List(List())
       else {
-        val combs = combinations(occurrences)
-        val wordsAndRestOccurrences = for (comb <- combs) yield (dictionaryByOccurrences(comb), subtract(occurrences, comb))
         for {
-          (words, restOccurrences) <- wordsAndRestOccurrences
-          word <- words
-          restSentence <- occurrencesAnagrams(restOccurrences)
-        } yield {
-          word :: restSentence
-        }
+          comb <- combinations(occurrences)
+          word <- dictionaryByOccurrences(comb)
+          restSentence <- occurrencesAnagrams(subtract(occurrences, comb))
+        } yield word :: restSentence
       }
     }
 

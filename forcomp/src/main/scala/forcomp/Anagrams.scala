@@ -175,7 +175,37 @@ object Anagrams {
       }
     }
 
-    val occurs = sentenceOccurrences(sentence)
-    occurrencesAnagrams(occurs)
+    occurrencesAnagrams(sentenceOccurrences(sentence))
+  }
+
+
+
+  /** Returns a list of all anagram sentences of the given sentence.
+   *
+   *  This function saves the results obtained the first time when it computes the anagrams for an occurence list,
+   *  and use the stored result if you need the same result a second time
+   *
+   */
+  val anagramsByOccurrences: collection.mutable.Map[Occurrences, List[Sentence]] = collection.mutable.Map()
+
+  def sentenceAnagramsMemo(sentence: Sentence): List[Sentence] = {
+    def occurrencesAnagramsMemo(occurrences: Occurrences): List[Sentence] = {
+      if (occurrences.isEmpty) List(List())
+      else anagramsByOccurrences.get(occurrences) match {
+        case Some(sentences) => sentences
+        case None => {
+          val newSentences: List[Sentence] = for {
+            comb <- combinations(occurrences)
+            word <- dictionaryByOccurrences(comb)
+            restSentence <- occurrencesAnagramsMemo(subtract(occurrences, comb))
+          } yield word :: restSentence
+
+          anagramsByOccurrences += (occurrences -> newSentences)
+          newSentences
+        }
+      }
+    }
+
+    occurrencesAnagramsMemo(sentenceOccurrences(sentence))
   }
 }
